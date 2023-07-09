@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Vlieguren</title>
+        <style>
+            .column {
+                float: left;
+                width: 50%;
+            }
+
+            #delete-data-btn {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background-color: red;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                cursor: pointer;
+            }
+
+            #delete-last-btn {
+                position: fixed;
+                top: 10px;
+                right: 130px;
+                background-color: red;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="delete-data-btn" onclick="confirmClearData()">Delete Data</button>
+        <button id="delete-last-btn" onclick="confirmDeleteLastSubmission()">Delete Last Submission</button>
+        
+        <div>
+            <label for="snr">Vliegtuig:</label>
+            <input type="text" id="snr" name="snr" placeholder="688"> <br><br>
+            <label for="time">Tijd (min):</label>
+            <input type="text" id="time" name="time" placeholder="15"> <br>
+            <button onclick="processing()">submit</button> <br><br><br>
+        </div>
+        <div>
+            <div class="column" id="result-plane"></div>
+            <div class="column" id="result-time"></div>
+        </div>
+
+        <div id="total-times"></div>
+        <div id="total-time-all"></div>
+
+        <script>
+            var submissions = [];
+            var totalTimeAll = 0;
+
+            // Load stored data on page load
+            window.addEventListener("load", function() {
+                var storedSubmissions = localStorage.getItem("submissions");
+                var storedTotalTimeAll = localStorage.getItem("totalTimeAll");
+
+                if (storedSubmissions) {
+                    submissions = JSON.parse(storedSubmissions);
+                }
+
+                if (storedTotalTimeAll) {
+                    totalTimeAll = parseInt(storedTotalTimeAll);
+                }
+
+                renderData();
+            });
+
+            function processing() {
+                var plane = document.getElementById("snr").value;
+                var resultPlane = document.getElementById("result-plane");
+                
+                var time = document.getElementById("time").value;
+                var resultTime = document.getElementById("result-time");
+
+                if (plane.trim() === "" || time.trim() === "") {
+                    alert("Please fill in both the plane and time fields.");
+                    return;
+                }
+
+                var timeInMinutes = parseInt(time);
+
+                submissions.push({
+                    plane: plane,
+                    time: timeInMinutes
+                });
+
+                totalTimeAll += timeInMinutes;
+
+                renderData();
+
+                // Save data to localStorage
+                localStorage.setItem("submissions", JSON.stringify(submissions));
+                localStorage.setItem("totalTimeAll", totalTimeAll.toString());
+
+                document.getElementById("snr").value = "";
+                document.getElementById("time").value = "";
+            }
+
+            function renderData() {
+                var resultPlane = document.getElementById("result-plane");
+                var resultTime = document.getElementById("result-time");
+                var totalTimes = {};
+
+                resultPlane.innerHTML = ""; // Clear previous content
+                resultTime.innerHTML = ""; // Clear previous content
+
+                for (var i = 0; i < submissions.length; i++) {
+                    var submission = submissions[i];
+                    var totalHours = Math.floor(submission.time / 60);
+                    var totalMinutes = submission.time % 60;
+                    resultPlane.innerHTML += "PH-" + submission.plane + "<br>";
+                    resultTime.innerHTML += submission.time + " min<br>";
+                    
+                    if (!totalTimes.hasOwnProperty(submission.plane)) {
+                        totalTimes[submission.plane] = 0;
+                    }
+                    totalTimes[submission.plane] += submission.time;
+                }
+                
+                var totalTimesDisplay = "";
+                for (var key in totalTimes) {
+                    if (totalTimes.hasOwnProperty(key)) {
+                        var totalHours = Math.floor(totalTimes[key] / 60);
+                        var totalMinutes = totalTimes[key] % 60;
+                        totalTimesDisplay += "PH-" + key + ": " + totalHours + ":" + totalMinutes.toString().padStart(2, "0") + "<br>";
+                    }
+                }
+                document.getElementById("total-times").innerHTML = totalTimesDisplay;
+
+                var totalHoursAll = Math.floor(totalTimeAll / 60);
+                var totalMinutesAll = totalTimeAll % 60;
+                document.getElementById("total-time-all").innerHTML = "Total Time: " + totalHoursAll + ":" + totalMinutesAll.toString().padStart(2, "0");
+            }
+
+            function clearData() {
+                submissions = [];
+                totalTimeAll = 0;
+
+                // Clear localStorage
+                localStorage.removeItem("submissions");
+                localStorage.removeItem("totalTimeAll");
+
+                renderData();
+            }
+
+            function confirmClearData() {
+                if (confirm("Are you sure you want to delete all data?")) {
+                    clearData();
+                }
+            }
+
+            function confirmDeleteLastSubmission() {
+                if (confirm("Are you sure you want to delete the last submission?")) {
+                    deleteLastSubmission();
+                }
+            }
+
+            function deleteLastSubmission() {
+                if (submissions.length > 0) {
+                    var lastSubmission = submissions.pop();
+                    totalTimeAll -= lastSubmission.time;
+
+                    renderData();
+
+                    // Save data to localStorage
+                    localStorage.setItem("submissions", JSON.stringify(submissions));
+                    localStorage.setItem("totalTimeAll", totalTimeAll.toString());
+                }
+            }
+        </script>
+    </body>
+</html>
